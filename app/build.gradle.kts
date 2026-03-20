@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "com.johannesl2.omniaudio"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.johannesl2.omniaudio"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
