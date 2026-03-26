@@ -22,4 +22,8 @@ class PlayerManager(context: Context) {
     fun release() {
         player.release()
     }
+
+    fun setVolume(volume: Float) {
+        player.volume = volume
+    }
 }

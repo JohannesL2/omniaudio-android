@@ -5,14 +5,22 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -27,9 +35,11 @@ import com.johannesl2.omniaudio.player.PlayerManager
 import com.johannesl2.omniaudio.ui.theme.OmniAudioTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
+import com.johannesl2.omniaudio.ui.VolumeSlider
 
 class MainActivity : ComponentActivity() {
 
@@ -49,6 +59,8 @@ class MainActivity : ComponentActivity() {
 
                 var stationList by remember { mutableStateOf(listOf<String>()) }
 
+                var volume by remember { mutableStateOf(0.7f) }
+
                 var currentPlayingUrl by remember { mutableStateOf<String?>(null) }
 
 
@@ -67,39 +79,79 @@ class MainActivity : ComponentActivity() {
                                 .padding(vertical = 16.dp)
                         )
 
-                        androidx.compose.foundation.layout.Spacer(
-                            modifier = Modifier.height(16.dp)
+                        Text("Mina Radiokanaler", fontSize = 24.sp, modifier = Modifier.padding(bottom = 16.dp))
+
+                        VolumeSlider(
+                            volume = volume,
+                            onVolumeChange = { newVolume ->
+                                volume = newVolume
+                                playerManager.setVolume(newVolume)
+                            }
                         )
 
-                        androidx.compose.material3.Button(
+                        TextField(
+                            value = urlInput,
+                            onValueChange = { urlInput = it },
+                            label = { Text("Add radio-URL here")},
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Button(
                             onClick = {
-                                if (isPlaying) {
-                                    playerManager.pause()
-                                } else {
-                                    playerManager.play("")
+                                if (urlInput.isNotBlank()) {
+                                    stationList = stationList + urlInput
+                                    urlInput = ""
                                 }
-                                isPlaying = !isPlaying
                             },
-                            modifier = Modifier.size(width = 180.dp, height = 60.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Black
-                            )
+                            modifier = Modifier.padding(vertical = 8.dp)
                         ) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                tint = Color.Yellow,
-                                modifier = Modifier.size(30.dp)
-                            )
-                            Text(
-                                text = if (isPlaying) "Pause" else "Play",
-                                fontSize = 18.sp,
-                                modifier = Modifier.padding(start = 8.dp)
-                                )
+                            Text("Add to list")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(stationList.size) { index ->
+                                val url = stationList[index]
+                                val isPlaying = currentPlayingUrl == url
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    onClick = {
+                                        if (isPlaying) {
+                                            playerManager.pause()
+                                            currentPlayingUrl = null
+                                        } else {
+                                            playerManager.play(url)
+                                            currentPlayingUrl = url
+                                        }
+                                    }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                            contentDescription = null
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "Station ${index + 1}: $url",
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         }
                     }
                 }
             }
         }
     }
-}
