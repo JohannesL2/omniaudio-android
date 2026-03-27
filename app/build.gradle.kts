@@ -57,6 +57,7 @@ dependencies {
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
 
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -67,6 +68,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

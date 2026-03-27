@@ -40,6 +40,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.johannesl2.omniaudio.ui.VolumeSlider
+import com.johannesl2.omniaudio.visualizer.VisualizerViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.johannesl2.omniaudio.visualizer.VisualizerView
 
 class MainActivity : ComponentActivity() {
 
@@ -53,6 +57,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             OmniAudioTheme {
+
                 var isPlaying by remember { mutableStateOf(false) }
 
                 var urlInput by remember { mutableStateOf("") }
@@ -79,7 +84,7 @@ class MainActivity : ComponentActivity() {
                                 .padding(vertical = 16.dp)
                         )
 
-                        Text("Mina Radiokanaler", fontSize = 24.sp, modifier = Modifier.padding(bottom = 16.dp))
+                        Text("Radio channels", fontSize = 24.sp, modifier = Modifier.padding(bottom = 16.dp))
 
                         VolumeSlider(
                             volume = volume,
@@ -87,6 +92,13 @@ class MainActivity : ComponentActivity() {
                                 volume = newVolume
                                 playerManager.setVolume(newVolume)
                             }
+                        )
+
+                        VisualizerView(
+                            isPlaying = currentPlayingUrl != null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp)
                         )
 
                         TextField(
@@ -126,7 +138,7 @@ class MainActivity : ComponentActivity() {
                                             playerManager.pause()
                                             currentPlayingUrl = null
                                         } else {
-                                            playerManager.play(url)
+                                            playerManager.play(url) {}
                                             currentPlayingUrl = url
                                         }
                                     }
