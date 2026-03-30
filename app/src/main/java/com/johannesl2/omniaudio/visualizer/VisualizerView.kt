@@ -33,7 +33,7 @@ fun VisualizerView(
             val height = value * size.height
 
             drawLine(
-                color = Color(0xFFBDBDBD),
+                color = Color(0xFFF8A066).copy(0.4f),
                 start = Offset(
                     x = index * barWidth + barWidth / 2,
                     y = size.height

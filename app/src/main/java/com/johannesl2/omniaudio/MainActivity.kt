@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -26,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -40,10 +42,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.johannesl2.omniaudio.ui.VolumeSlider
-import com.johannesl2.omniaudio.visualizer.VisualizerViewModel
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.johannesl2.omniaudio.data.repository.RetrofitInstance
 import com.johannesl2.omniaudio.visualizer.VisualizerView
+import kotlinx.coroutines.launch
+import com.johannesl2.omniaudio.data.model.RadioStation
 
 class MainActivity : ComponentActivity() {
 
@@ -62,11 +67,27 @@ class MainActivity : ComponentActivity() {
 
                 var urlInput by remember { mutableStateOf("") }
 
-                var stationList by remember { mutableStateOf(listOf<String>()) }
+                var stationList by remember { mutableStateOf(listOf<RadioStation>()) }
 
                 var volume by remember { mutableStateOf(0.7f) }
 
                 var currentPlayingUrl by remember { mutableStateOf<String?>(null) }
+
+                val scope = rememberCoroutineScope()
+
+                LaunchedEffect(Unit) {
+                    scope.launch {
+                        try {
+                            val stations = RetrofitInstance.api.getStations()
+
+                            stationList = stations
+                                .filter { it.url.isNotBlank() }
+                                .take(20)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
 
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -80,19 +101,11 @@ class MainActivity : ComponentActivity() {
                             painter = painterResource(id = R.drawable.omni_audio),
                             contentDescription = "OmniAudio Logo",
                             modifier = Modifier
-                                .height(280.dp)
+                                .height(200.dp)
                                 .padding(vertical = 16.dp)
                         )
 
                         Text("Radio channels", fontSize = 24.sp, modifier = Modifier.padding(bottom = 16.dp))
-
-                        VolumeSlider(
-                            volume = volume,
-                            onVolumeChange = { newVolume ->
-                                volume = newVolume
-                                playerManager.setVolume(newVolume)
-                            }
-                        )
 
                         VisualizerView(
                             isPlaying = currentPlayingUrl != null,
@@ -105,17 +118,21 @@ class MainActivity : ComponentActivity() {
                             value = urlInput,
                             onValueChange = { urlInput = it },
                             label = { Text("Add radio-URL here")},
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).padding(top = 4.dp)
                         )
 
                         Button(
                             onClick = {
                                 if (urlInput.isNotBlank()) {
-                                    stationList = stationList + urlInput
-                                    urlInput = ""
+                                    stationList = stationList + RadioStation(
+                                        name = "Custom",
+                                        url = urlInput
+                                    )
                                 }
                             },
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp).fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(0.dp),
+                            colors = ButtonDefaults.buttonColors(Color.Black)
                         ) {
                             Text("Add to list")
                         }
@@ -126,8 +143,9 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(stationList.size) { index ->
-                                val url = stationList[index]
-                                val isPlaying = currentPlayingUrl == url
+                                val station = stationList[index]
+                                currentPlayingUrl = station.url
+                                val isPlaying = currentPlayingUrl == station.url
 
                                 Card(
                                     modifier = Modifier
@@ -138,8 +156,8 @@ class MainActivity : ComponentActivity() {
                                             playerManager.pause()
                                             currentPlayingUrl = null
                                         } else {
-                                            playerManager.play(url) {}
-                                            currentPlayingUrl = url
+                                            playerManager.play(station.url) {}
+                                            currentPlayingUrl = station.url
                                         }
                                     }
                                 ) {
@@ -153,7 +171,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Text(
-                                            text = "Station ${index + 1}: $url",
+                                            text = station.name ?: "Unknown station",
                                             modifier = Modifier.weight(1f),
                                             maxLines = 1
                                         )
