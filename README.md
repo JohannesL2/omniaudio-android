@@ -1,6 +1,8 @@
 # OmniAudio
 
 OmniAudio is a modern Android music player built with the latest Android technologies.
+![Kotlin](https://img.shields.io/badge/kotlin-%237F52FF.svg?style=for-the-badge&logo=kotlin&logoColor=white)
+![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 
 **Omni** means *"everything"* — the goal of this app is to bring all your audio into one place.
 
@@ -12,7 +14,9 @@ OmniAudio is a modern Android music player built with the latest Android technol
 * Hilt
 
 ## Screenshots
-![OmniAudio App Screenshot](Screenshot.png)
+<p align="center">
+  <img src="Screenshot.png" alt="OmniAudio App Screenshot" width="300">
+</p>
 
 ## Getting Started
 
