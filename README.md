@@ -11,6 +11,9 @@ OmniAudio is a modern Android music player built with the latest Android technol
 * Media3
 * Hilt
 
+## Screenshots
+![OmniAudio App Screenshot](Screenshot.png)
+
 ## Getting Started
 
 Follow these steps to run the project locally:
