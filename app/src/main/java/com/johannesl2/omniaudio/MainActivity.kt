@@ -49,6 +49,10 @@ import com.johannesl2.omniaudio.data.repository.RetrofitInstance
 import com.johannesl2.omniaudio.visualizer.VisualizerView
 import kotlinx.coroutines.launch
 import com.johannesl2.omniaudio.data.model.RadioStation
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.provider.OpenableColumns
+import kotlin.compareTo
 
 class MainActivity : ComponentActivity() {
 
@@ -75,6 +79,19 @@ class MainActivity : ComponentActivity() {
 
                 val scope = rememberCoroutineScope()
 
+                // NEW FEATURE: Allows users to select local audio files
+                val audioPicker =
+                    rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.GetContent()
+                    ) { uri ->
+
+                        uri?.let {
+                            stationList = stationList + RadioStation(
+                                name = getFileName(it),
+                                url = it.toString()
+                            )
+                        }
+                    }
                 LaunchedEffect(Unit) {
                     scope.launch {
                         try {
@@ -105,7 +122,11 @@ class MainActivity : ComponentActivity() {
                                 .padding(vertical = 16.dp)
                         )
 
-                        Text("Radio channels", fontSize = 24.sp, modifier = Modifier.padding(bottom = 16.dp))
+                        Text(
+                            "Radio channels",
+                            fontSize = 24.sp,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
 
                         VisualizerView(
                             isPlaying = currentPlayingUrl != null,
@@ -117,8 +138,9 @@ class MainActivity : ComponentActivity() {
                         TextField(
                             value = urlInput,
                             onValueChange = { urlInput = it },
-                            label = { Text("Add radio-URL here")},
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).padding(top = 4.dp)
+                            label = { Text("Add radio-URL here") },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                                .padding(top = 4.dp)
                         )
 
                         Button(
@@ -130,7 +152,8 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             },
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp).fillMaxWidth().height(56.dp),
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
+                                .fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(0.dp),
                             colors = ButtonDefaults.buttonColors(Color.Black)
                         ) {
@@ -139,12 +162,31 @@ class MainActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // NEW FEATURE: Load local music from device storage
+                        Button(
+                            onClick = {
+                                audioPicker.launch("audio/*")
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp)
+                        ) {
+                            Text("Load Custom Music")
+                        }
+                        VolumeSlider(
+                            volume = volume,
+                            onVolumeChange = {
+                                volume = it
+                                playerManager.setVolume(it)
+                            }
+                        )
                         LazyColumn(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(stationList.size) { index ->
                                 val station = stationList[index]
-                                currentPlayingUrl = station.url
+
+                                // Check whether this station/file is currently playing
                                 val isPlaying = currentPlayingUrl == station.url
 
                                 Card(
@@ -171,7 +213,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Text(
-                                            text = station.name ?: "Unknown station",
+                                            text = station.name,
                                             modifier = Modifier.weight(1f),
                                             maxLines = 1
                                         )
@@ -179,9 +221,31 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-                        }
                     }
                 }
             }
         }
     }
+    private fun getFileName(uri: android.net.Uri): String {
+        var name = "Custom Audio"
+
+        contentResolver.query(
+            uri,
+            null,
+            null,
+            null,
+            null
+        )?.use { cursor ->
+
+            val nameIndex =
+                cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+
+            if (cursor.moveToFirst() && nameIndex >= 0) {
+                name = cursor.getString(nameIndex)
+            }
+        }
+
+        return name
+    }
+    }
+

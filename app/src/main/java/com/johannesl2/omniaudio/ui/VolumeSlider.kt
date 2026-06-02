@@ -31,7 +31,7 @@ fun VolumeSlider(
                 tint = Color.Gray
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Volym: ${(volume * 100).toInt()}%", fontSize = 14.sp)
+            Text("Volume: ${(volume * 100).toInt()}%", fontSize = 14.sp)
         }
 
         Slider(
