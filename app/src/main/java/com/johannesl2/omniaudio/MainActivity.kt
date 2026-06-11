@@ -5,50 +5,26 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.johannesl2.omniaudio.player.PlayerManager
-import com.johannesl2.omniaudio.ui.theme.OmniAudioTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.johannesl2.omniaudio.ui.VolumeSlider
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.johannesl2.omniaudio.data.repository.RetrofitInstance
+import com.johannesl2.omniaudio.data.model.MainViewModel
+import com.johannesl2.omniaudio.player.PlayerManager
+import com.johannesl2.omniaudio.ui.VolumeSlider
+import com.johannesl2.omniaudio.ui.theme.OmniAudioTheme
 import com.johannesl2.omniaudio.visualizer.VisualizerView
-import kotlinx.coroutines.launch
-import com.johannesl2.omniaudio.data.model.RadioStation
 
 class MainActivity : ComponentActivity() {
 
@@ -60,43 +36,24 @@ class MainActivity : ComponentActivity() {
         playerManager = PlayerManager(this)
 
         enableEdgeToEdge()
+
         setContent {
             OmniAudioTheme {
 
-                var isPlaying by remember { mutableStateOf(false) }
+                // Obtain ViewModel
+                val viewModel: MainViewModel = viewModel()
 
-                var urlInput by remember { mutableStateOf("") }
+                Scaffold(
+                    modifier = Modifier.fillMaxSize()
+                ) { innerPadding ->
 
-                var stationList by remember { mutableStateOf(listOf<RadioStation>()) }
-
-                var volume by remember { mutableStateOf(0.7f) }
-
-                var currentPlayingUrl by remember { mutableStateOf<String?>(null) }
-
-                val scope = rememberCoroutineScope()
-
-                LaunchedEffect(Unit) {
-                    scope.launch {
-                        try {
-                            val stations = RetrofitInstance.api.getStations()
-
-                            stationList = stations
-                                .filter { it.url.isNotBlank() }
-                                .take(20)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-
-
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    androidx.compose.foundation.layout.Column(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
-                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+
                         Image(
                             painter = painterResource(id = R.drawable.omni_audio),
                             contentDescription = "OmniAudio Logo",
@@ -105,32 +62,48 @@ class MainActivity : ComponentActivity() {
                                 .padding(vertical = 16.dp)
                         )
 
-                        Text("Radio channels", fontSize = 24.sp, modifier = Modifier.padding(bottom = 16.dp))
+                        Text(
+                            text = "Radio channels",
+                            fontSize = 24.sp,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
 
+                        // Audio visualizer
                         VisualizerView(
-                            isPlaying = currentPlayingUrl != null,
+                            isPlaying = viewModel.currentPlayingUrl != null,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(150.dp)
                         )
-
-                        TextField(
-                            value = urlInput,
-                            onValueChange = { urlInput = it },
-                            label = { Text("Add radio-URL here")},
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).padding(top = 4.dp)
+                        // Volume control
+                        VolumeSlider(
+                            volume = viewModel.volume,
+                            onVolumeChange = {
+                                viewModel.updateVolume(it)
+                                playerManager.setVolume(it)
+                            }
                         )
 
+                        // URL input field
+                        TextField(
+                            value = viewModel.urlInput,
+                            onValueChange = viewModel::updateUrlInput,
+                            label = { Text("Add radio-URL here") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp)
+                                .padding(top = 4.dp)
+                        )
+
+                        // Add custom station
                         Button(
                             onClick = {
-                                if (urlInput.isNotBlank()) {
-                                    stationList = stationList + RadioStation(
-                                        name = "Custom",
-                                        url = urlInput
-                                    )
-                                }
+                                viewModel.addCustomStation()
                             },
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp).fillMaxWidth().height(56.dp),
+                            modifier = Modifier
+                                .padding(vertical = 8.dp, horizontal = 8.dp)
+                                .fillMaxWidth()
+                                .height(56.dp),
                             shape = RoundedCornerShape(0.dp),
                             colors = ButtonDefaults.buttonColors(Color.Black)
                         ) {
@@ -139,37 +112,50 @@ class MainActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // Station list
                         LazyColumn(
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(stationList.size) { index ->
-                                val station = stationList[index]
-                                currentPlayingUrl = station.url
-                                val isPlaying = currentPlayingUrl == station.url
+
+                            items(viewModel.stationList) { station ->
+
+                                val isPlaying =
+                                    viewModel.currentPlayingUrl == station.url
 
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp),
                                     onClick = {
+
                                         if (isPlaying) {
                                             playerManager.pause()
-                                            currentPlayingUrl = null
+                                            viewModel.updateCurrentPlaying(null)
                                         } else {
                                             playerManager.play(station.url) {}
-                                            currentPlayingUrl = station.url
+                                            viewModel.updateCurrentPlaying(station.url)
                                         }
                                     }
                                 ) {
+
                                     Row(
                                         modifier = Modifier.padding(16.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+
                                         Icon(
-                                            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                            imageVector =
+                                                if (isPlaying)
+                                                    Icons.Filled.Pause
+                                                else
+                                                    Icons.Filled.PlayArrow,
                                             contentDescription = null
                                         )
-                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Spacer(
+                                            modifier = Modifier.width(12.dp)
+                                        )
+
                                         Text(
                                             text = station.name ?: "Unknown station",
                                             modifier = Modifier.weight(1f),
@@ -179,9 +165,9 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-                        }
                     }
                 }
             }
         }
     }
+}
