@@ -29,10 +29,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,12 +38,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.johannesl2.omniaudio.data.model.RadioStation
-import com.johannesl2.omniaudio.data.repository.RetrofitInstance
 import com.johannesl2.omniaudio.player.PlayerManager
 import com.johannesl2.omniaudio.ui.VolumeSlider
 import com.johannesl2.omniaudio.ui.theme.OmniAudioTheme
 import com.johannesl2.omniaudio.visualizer.VisualizerView
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -62,8 +58,6 @@ class MainActivity : ComponentActivity() {
             OmniAudioTheme {
                 val uiState by viewModel.uiState.collectAsState()
 
-                val scope = rememberCoroutineScope()
-
                 // NEW FEATURE: Allows users to select local audio files
                 val audioPicker =
                     rememberLauncherForActivityResult(
@@ -77,22 +71,6 @@ class MainActivity : ComponentActivity() {
                             ))
                         }
                     }
-                LaunchedEffect(Unit) {
-                    scope.launch {
-                        try {
-                            val stations = RetrofitInstance.api.getStations()
-
-                            val stationList = stations
-                                .filter { it.url.isNotBlank() }
-                                .take(20)
-                            viewModel.addStations(stationList)
-
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column(
@@ -163,10 +141,6 @@ class MainActivity : ComponentActivity() {
                         VolumeSlider(
                             volume = uiState.volume,
                             onVolumeChange = { viewModel.changeVolume(it)}
-//                            onVolumeChange = {
-//                                volume = it
-//                                playerManager.setVolume(it)
-//                            }
                         )
                         LazyColumn(
                             modifier = Modifier.fillMaxSize()
