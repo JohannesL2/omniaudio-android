@@ -1,20 +1,23 @@
 package com.johannesl2.omniaudio
 
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
@@ -26,58 +29,34 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.johannesl2.omniaudio.player.PlayerManager
-import com.johannesl2.omniaudio.ui.theme.OmniAudioTheme
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.johannesl2.omniaudio.ui.VolumeSlider
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.johannesl2.omniaudio.data.repository.RetrofitInstance
-import com.johannesl2.omniaudio.visualizer.VisualizerView
-import kotlinx.coroutines.launch
 import com.johannesl2.omniaudio.data.model.RadioStation
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import android.provider.OpenableColumns
-import kotlin.compareTo
+import com.johannesl2.omniaudio.player.PlayerManager
+import com.johannesl2.omniaudio.ui.VolumeSlider
+import com.johannesl2.omniaudio.ui.theme.OmniAudioTheme
+import com.johannesl2.omniaudio.visualizer.VisualizerView
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var playerManager: PlayerManager
-
+    private val viewModel: MainViewModel = MainViewModel()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
 
         playerManager = PlayerManager(this)
 
         enableEdgeToEdge()
         setContent {
             OmniAudioTheme {
-
-                var isPlaying by remember { mutableStateOf(false) }
-
-                var urlInput by remember { mutableStateOf("") }
-
-                var stationList by remember { mutableStateOf(listOf<RadioStation>()) }
-
-                var volume by remember { mutableStateOf(0.7f) }
-
-                var currentPlayingUrl by remember { mutableStateOf<String?>(null) }
-
-                val scope = rememberCoroutineScope()
+                val uiState by viewModel.uiState.collectAsState()
 
                 // NEW FEATURE: Allows users to select local audio files
                 val audioPicker =
@@ -86,33 +65,19 @@ class MainActivity : ComponentActivity() {
                     ) { uri ->
 
                         uri?.let {
-                            stationList = stationList + RadioStation(
+                            viewModel.addStation(RadioStation(
                                 name = getFileName(it),
                                 url = it.toString()
-                            )
+                            ))
                         }
                     }
-                LaunchedEffect(Unit) {
-                    scope.launch {
-                        try {
-                            val stations = RetrofitInstance.api.getStations()
-
-                            stationList = stations
-                                .filter { it.url.isNotBlank() }
-                                .take(20)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    androidx.compose.foundation.layout.Column(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
-                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.omni_audio),
@@ -129,15 +94,15 @@ class MainActivity : ComponentActivity() {
                         )
 
                         VisualizerView(
-                            isPlaying = currentPlayingUrl != null,
+                            isPlaying = uiState.currentPlayingUrl != null,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(150.dp)
                         )
 
                         TextField(
-                            value = urlInput,
-                            onValueChange = { urlInput = it },
+                            value = uiState.urlInput,
+                            onValueChange = { viewModel.changeUrlInput(it) },
                             label = { Text("Add radio-URL here") },
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
                                 .padding(top = 4.dp)
@@ -145,11 +110,11 @@ class MainActivity : ComponentActivity() {
 
                         Button(
                             onClick = {
-                                if (urlInput.isNotBlank()) {
-                                    stationList = stationList + RadioStation(
+                                if (uiState.urlInput.isNotBlank()) {
+                                    viewModel.addStation(RadioStation(
                                         name = "Custom",
-                                        url = urlInput
-                                    )
+                                        url = uiState.urlInput
+                                    ))
                                 }
                             },
                             modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
@@ -174,20 +139,17 @@ class MainActivity : ComponentActivity() {
                             Text("Load Custom Music")
                         }
                         VolumeSlider(
-                            volume = volume,
-                            onVolumeChange = {
-                                volume = it
-                                playerManager.setVolume(it)
-                            }
+                            volume = uiState.volume,
+                            onVolumeChange = { viewModel.changeVolume(it)}
                         )
                         LazyColumn(
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(stationList.size) { index ->
-                                val station = stationList[index]
+                            items(uiState.stationList.size) { index ->
+                                val station = uiState.stationList[index]
 
                                 // Check whether this station/file is currently playing
-                                val isPlaying = currentPlayingUrl == station.url
+                                val isPlaying = uiState.currentPlayingUrl == station.url
 
                                 Card(
                                     modifier = Modifier
@@ -196,10 +158,10 @@ class MainActivity : ComponentActivity() {
                                     onClick = {
                                         if (isPlaying) {
                                             playerManager.pause()
-                                            currentPlayingUrl = null
+                                            viewModel.changeCurrentPlayingUrl(null)
                                         } else {
                                             playerManager.play(station.url) {}
-                                            currentPlayingUrl = station.url
+                                            viewModel.changeCurrentPlayingUrl(station.url)
                                         }
                                     }
                                 ) {
@@ -226,7 +188,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    private fun getFileName(uri: android.net.Uri): String {
+    private fun getFileName(uri: Uri): String {
         var name = "Custom Audio"
 
         contentResolver.query(
